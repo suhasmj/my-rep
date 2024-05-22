@@ -1,0 +1,2 @@
+web_target ansible_host=10.20.0.137 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/demokey.pem
+db_target ansible_host=10.10.0.54 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/demokey.pem

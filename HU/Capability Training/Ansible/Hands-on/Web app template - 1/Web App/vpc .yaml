@@ -1,0 +1,269 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: This template creates vpc with public and private subnets
+
+# The following metadata is used to group the parameters
+Metadata:
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:
+      - 
+        Label: 
+          default: "VPC CIDR"
+        Parameters: 
+          - Vpc1CIDR
+          - Vpc2CIDR
+      - 
+        Label: 
+          default: "Subnet CIDR"
+        Parameters:
+          - PublicSubnet1CIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+      - 
+        Label: 
+          default: "SSH CIDR"
+        Parameters: 
+          - SSHLocation
+
+# Parameters are used to to build flexible CloudFormation templates
+Parameters:
+  Vpc1CIDR:
+    Default: 10.100.0.0/16
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+
+  Vpc2CIDR:
+    Default: 10.200.0.0/16
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+
+  PublicSubnet1CIDR:
+    Default: 10.100.0.0/24
+    Description: Please enter the IP range (CIDR notation) for the public subnet 1
+    Type: String
+
+  PrivateSubnet1CIDR:
+    Default: 10.100.1.0/24
+    Description: Please enter the IP range (CIDR notation) for the private subnet 1
+    Type: String
+
+  PrivateSubnet2CIDR:
+    Default: 10.200.1.0/24
+    Description: Please enter the IP range (CIDR notation) for the private subnet 1
+    Type: String
+
+  SSHLocation:
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: 0.0.0.0/0
+    Description: The IP address range that can be used to access the web server using SSH.
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+
+Resources:
+# Create VPC-A
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref Vpc1CIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: Webserver VPC
+
+# Create Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Test IGW
+
+# Attach Internet Gateway to VPC
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC1
+
+# Create Public Subnet1 in VPC-A
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
+      VpcId: !Ref VPC1
+
+# Create Route Table for public subnet
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Public Route Table
+      VpcId: !Ref VPC1
+
+# Add a Public Route to the Route Table
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+# Associate Public Subnet1 with Public Route Table
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+# Create Private Subnet1 in VPC-A
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: Private Subnet 1 | App Tier
+      VpcId: !Ref VPC1
+
+# Create Route Table for private subnet
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Private Route Table
+      VpcId: !Ref VPC1
+
+# Associate Private Subnet1 with Private Route Table
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+# Create an EC2 instance in the public subnet in VPC-A 
+  PublicEC2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+      InstanceType: t2.micro
+      Tags:
+        - Key: Name
+          Value: Public Instance
+
+
+# Create an EC2 instance in the private subnet in VPC-A 
+  PublicEC2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+      InstanceType: t2.micro
+      Tags:
+        - Key: Name
+          Value: Public Instance
+
+# Create VPC-B
+  VPC2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref Vpc2CIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: Database Server VPC
+
+# Create Private Subnet2 in VPC-B
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: Private Subnet 2 | App Tier
+      VpcId: !Ref VPC2
+
+
+# Create an EC2 instance in the private subnet in VPC-B
+  PublicEC2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+      InstanceType: t2.micro
+      Tags:
+        - Key: Name
+          Value: Public Instance
+
+
+
+# Create Security Group
+  WebAppSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: !Join ["-", [webapp-security-group, dev]]
+        GroupDescription: "Allow HTTP/HTTPS and SSH inbound and outbound traffic"
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+
+
+Outputs:
+# Export VPC-A ID
+  VPC1:
+    Description: VPC ID
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1
+    Value: !Ref VPC1
+
+# Export VPC-B ID
+  VPC2:
+    Description: VPC ID
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC2
+    Value: !Ref VPC2
+
+# Export Public Subnet 1 
+  PublicSubnet1:
+    Description: Public Subnet 1 ID
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1
+    Value: !Ref PublicSubnet1
+
+# Export Private Subnet 1
+  PrivateSubnet1:
+    Description: Private Subnet 1 ID
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1
+    Value: !Ref PrivateSubnet1
+
+# Export Private Subnet 2
+  PrivateSubnet2:
+    Description: Private Subnet 2 ID
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2
+    Value: !Ref PrivateSubnet2

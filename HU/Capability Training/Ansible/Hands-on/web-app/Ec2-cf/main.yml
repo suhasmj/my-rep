@@ -1,0 +1,16 @@
+---
+- name: Ansible Cloudformation module example using a template parameter
+  hosts: webserver
+  remote_user: ubuntu  
+  tasks:
+    - name: create a cloudformation stack
+      amazon.aws.cloudformation:
+        stack_name: "pod-1"
+
+        state: "present"
+        region: "us-east-1"
+        template: "/home/ubuntu/ansible/playbook/aws-ec2/files/cf.json"
+        tags:
+          Stack: "ansible-cloudformation"
+
+

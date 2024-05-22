@@ -1,0 +1,19 @@
+  GNU nano 6.2                                                                                      main.tf *                                                                                              
+provider "aws"{
+        region = "us-east-2"
+}
+resource "aws_key_pair" "tejas-key-1"{
+        key_name = "tejas-key-1" 
+        public_key = file("/home/ubuntu/.ssh/id_rsa.pub")
+}
+resoure "aws_instance" "aws-nginx-instance"{
+        ami = "ami-02f3416038bdb17fb"
+        instance_type = "t2.micro"
+        key_name = aws_key_pair.tejas-key-1.id
+        user_data = "/home/ubuntu/terraform/nginx.sh"
+        tags = {
+                Name = "hu-sdet-devops-tejas-1"
+        }
+}
+
+

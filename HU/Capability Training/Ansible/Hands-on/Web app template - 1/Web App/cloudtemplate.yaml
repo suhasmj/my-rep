@@ -1,0 +1,361 @@
+Description:  This template deploys a VPC, with a public and a private subnet.
+  It deploys an internet gateway, with a default route on the public subnet. 
+  It deploys a NAT gateway, and default routes for it in the private subnet.
+  It deploys another VPC, with a public subnet. It deploys an internet gateway,
+  with a default route on the public subnet.
+  It deploys a peering connection between the VPCs.
+  It deploys an EC2 instance on each subnet.
+
+Parameters:
+  VpcCIDRdb:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.10.0.0/16
+
+  PublicSubnetCIDRdb:
+    Description: Please enter the IP range (CIDR notation) for the public subnet
+    Type: String
+    Default: 10.10.1.0/24
+
+  PrivateSubnetCIDRdb:
+    Description: Please enter the IP range (CIDR notation) for the private subnet
+    Type: String
+    Default: 10.10.0.0/24
+
+  VpcCIDRweb:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.20.0.0/16
+
+  PublicSubnetCIDRweb:
+    Description: Please enter the IP range (CIDR notation) for the public subnet
+    Type: String
+    Default: 10.20.0.0/24
+
+  EC2InstanceType:
+    Description: Please enter the Instance type of EC2
+    Type: String
+    Default: t2.micro
+
+  EC2KeyName:
+    Description: Please enter the KeyName for EC2
+    Type: String
+    Default: demokey
+
+  EC2ImageId:
+    Description: Please enter the ImageID of the Image to be used
+    Type: String
+    Default: ami-052efd3df9dad4825
+
+Resources:
+  VPCdb:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDRdb
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: VPC-db
+
+  InternetGatewaydb:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW-db
+
+  InternetGatewayAttachmentdb:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGatewaydb
+      VpcId: !Ref VPCdb
+
+  PublicSubnetdb:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCdb
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnetCIDRdb
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet-db
+
+  PublicRouteTabledb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCdb
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable-db
+
+  PublicRoutedb:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachmentdb
+    Properties:
+      RouteTableId: !Ref PublicRouteTabledb
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGatewaydb
+
+  PublicSubnetRouteTableAssociationdb:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTabledb
+      SubnetId: !Ref PublicSubnetdb
+
+  PrivateSubnetdb:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCdb
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnetCIDRdb
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet-db
+
+  NatGatewayEIPdb:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachmentdb
+    Properties:
+      Domain: vpc
+
+  NatGatewaydb:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIPdb.AllocationId
+      SubnetId: !Ref PublicSubnetdb
+      Tags:
+        - Key: Name
+          Value: NatGateway-db
+
+  PrivateRouteTabledb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCdb
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable-db
+
+  PrivateRoutedb:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTabledb
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewaydb
+
+  PrivateSubnetRouteTableAssociationdb:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTabledb
+      SubnetId: !Ref PrivateSubnetdb
+
+  VPCweb:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDRweb
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: VPC-web
+
+  InternetGatewayweb:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW-web
+
+  InternetGatewayAttachmentweb:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGatewayweb
+      VpcId: !Ref VPCweb
+
+  PublicSubnetweb:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPCweb
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnetCIDRweb
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet-web
+
+  PublicRouteTableweb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCweb
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable-web
+
+  PublicRouteweb:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachmentweb
+    Properties:
+      RouteTableId: !Ref PublicRouteTableweb
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGatewayweb
+
+  PublicSubnetRouteTableAssociationweb:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTableweb
+      SubnetId: !Ref PublicSubnetweb
+
+  PeeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties: 
+      VpcId: !Ref VPCdb
+      PeerVpcId: !Ref VPCweb
+      Tags:
+        - Key: Name
+          Value: PeeringConnection
+  
+  PublicRoutedb2:
+    Type: AWS::EC2::Route
+    DependsOn: PeeringConnection
+    Properties:
+      RouteTableId: !Ref PublicRouteTabledb
+      DestinationCidrBlock: !Ref PublicSubnetCIDRweb
+      VpcPeeringConnectionId: !Ref PeeringConnection
+      
+  PrivateRoutedb2:
+    Type: AWS::EC2::Route
+    DependsOn: PeeringConnection
+    Properties:
+      RouteTableId: !Ref PrivateRouteTabledb
+      DestinationCidrBlock: !Ref PublicSubnetCIDRweb
+      VpcPeeringConnectionId: !Ref PeeringConnection
+
+  PublicRouteweb2:
+    Type: AWS::EC2::Route
+    DependsOn: PeeringConnection
+    Properties:
+      RouteTableId: !Ref PublicRouteTableweb
+      DestinationCidrBlock: !Ref PublicSubnetCIDRdb
+      VpcPeeringConnectionId: !Ref PeeringConnection
+
+  PublicRouteweb3:
+    Type: AWS::EC2::Route
+    DependsOn: PeeringConnection
+    Properties:
+      RouteTableId: !Ref PublicRouteTableweb
+      DestinationCidrBlock: !Ref PrivateSubnetCIDRdb
+      VpcPeeringConnectionId: !Ref PeeringConnection
+
+  SecurityGroupdb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for Database Instance
+      GroupName: 'SecurityGroupdb'
+      VpcId: !Ref VPCdb
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SecurityGroup-db
+
+  SecurityGroupweb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for Webpage Instance
+      GroupName: 'SecurityGroupweb'
+      VpcId: !Ref VPCweb
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 5000
+        ToPort: 5000
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SecurityGroup-web
+
+  PublicEC2db:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref EC2InstanceType
+      SecurityGroupIds: [!Ref 'SecurityGroupdb']
+      KeyName: !Ref EC2KeyName
+      ImageId: !Ref EC2ImageId
+      SubnetId: !Ref PublicSubnetdb
+      # NetworkInterfaces:
+      #   - SubnetId: !Ref PublicSubnetdb
+      #   - AssociatePublicIpAddress: "true"
+      #   - DeviceIndex: "0"
+      Tags:
+        - Key: Name
+          Value: PublicEC2-db
+
+  PrivateEC2db:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref EC2InstanceType
+      SecurityGroupIds: [!Ref 'SecurityGroupdb']
+      KeyName: !Ref EC2KeyName
+      ImageId: !Ref EC2ImageId
+      SubnetId: !Ref PrivateSubnetdb
+      # NetworkInterfaces:
+      #   - SubnetId: !Ref PrivateSubnetweb
+      #   - AssociatePublicIpAddress: "false"
+      #   - DeviceIndex: "0"
+      Tags:
+        - Key: Name
+          Value: PrivateEC2-db
+
+  PublicEC2web:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref EC2InstanceType
+      SecurityGroupIds: [!Ref 'SecurityGroupweb']
+      KeyName: !Ref EC2KeyName
+      ImageId: !Ref EC2ImageId
+      SubnetId: !Ref PublicSubnetweb
+      # NetworkInterfaces:
+      #   - SubnetId: !Ref PublicSubnetweb
+      #   - AssociatePublicIpAddress: "true"
+      #   - DeviceIndex: "0"
+      Tags:
+        - Key: Name
+          Value: PublicEC2-web
+
+
+Outputs:
+  VPCdb:
+    Description: A reference to the created VPC
+    Value: !Ref VPCdb
+
+  PublicSubnetdb:
+    Description: A reference to the public subnet
+    Value: !Ref PublicSubnetdb
+
+  PrivateSubnetdb:
+    Description: A reference to the private subnet
+    Value: !Ref PrivateSubnetdb
+
+  VPCweb:
+    Description: A reference to the created VPC
+    Value: !Ref VPCweb
+
+  PublicSubnetweb:
+    Description: A reference to the public subnet
+    Value: !Ref PublicSubnetweb
+
+  PublicIPweb:
+    Description: Public IP address of the Web Instance
+    Value: !GetAtt [PublicEC2web, PublicIp]

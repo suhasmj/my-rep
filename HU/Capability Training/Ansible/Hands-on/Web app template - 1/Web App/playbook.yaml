@@ -1,0 +1,72 @@
+-
+  name: "Deploy Database with data in Remote Virtual Machine"
+  hosts: db_target
+  become: yes
+  tasks:
+    - name: "Update Cache of the Machine"
+      apt: update_cache=yes
+
+    - name: "Install Python dependencies"
+      apt: name={{ item }} state=present
+      loop:
+       - python3
+       - python3-pip
+       - python3-mysqldb
+
+    - name: "Install MySQL database"
+      apt: name={{ item }} state=present
+      loop:
+       - mysql-server
+       - mysql-client
+
+    - name: "Start Mysql Service"
+      service: name='mysql' state=started enabled=yes
+
+    - name: "Configure Mysql Host"
+      replace: path=/etc/mysql/mysql.conf.d/mysqld.cnf regexp='^bind-address.*' replace='#bind-address            = 127.0.0.1'
+
+    - name: "Restart Mysql Service"
+      service: name='mysql' state=restarted enabled=yes
+
+#    - name: "Start Mysql Service"
+#      service: name='mysql' state=started enabled=yes
+
+    - name: "Create Database"
+      mysql_db: name='sample_database' login_unix_socket=/var/run/mysqld/mysqld.sock state=present
+
+    - name: "Create Database User"
+      mysql_user: name='sample_user' password='Passw0rd' priv='*.*:ALL' host='%' login_unix_socket=/var/run/mysqld/mysqld.sock state=present
+
+    - name: "Copy SQL query"
+      copy: src=sample.sql dest=/tmp/sample.sql
+
+    - name: "Create Table and Add data to table"
+      mysql_db: name='sample_database' state=import target=/tmp/sample.sql login_user='sample_user' login_password='Passw0rd'
+
+
+-
+  name: "Deploy a Webpage in Remote Virtual Machine and Connect in to Remote Database"
+  hosts: web_target
+  become: yes
+  tasks:
+    - name: "Update Cache of the Machine"
+      apt: update_cache=yes
+
+    - name: "Install Python dependencies"
+      apt: name={{ item }} state=present
+      loop:
+       - python3
+       - python3-pip
+       - python3-mysqldb
+
+    - name: "Install Webpage dependencies"
+      pip: name='{{ item }}' state=present
+      loop:
+       - flask
+       - flask-mysql
+
+    - name: "Copy web code"
+      copy: src=app.py dest=/opt/app.py
+
+    - name: "Start Web-application"
+      shell: FLASK_APP=/opt/app.py nohup flask run --host=0.0.0.0 &

@@ -1,0 +1,8 @@
+SonarQube:
+https://www.fosstechnix.com/how-to-install-sonarqube-on-ubuntu-20-04/
+https://deloittedevelopment.udemy.com/course/valaxy-maven/learn/lecture/28479900#search
+
+=============================================================================================================================================================
+DataDog:
+https://www.youtube.com/watch?v=0p9JJobuVTg
+https://www.youtube.com/watch?v=RFgvkTxA4qo

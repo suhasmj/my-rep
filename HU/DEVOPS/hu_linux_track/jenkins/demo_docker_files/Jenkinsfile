@@ -1,0 +1,46 @@
+pipeline{
+
+	agent {label 'Built-in Node'}
+
+	environment {
+		DOCKERHUB_CREDENTIALS=credentials('dockerhub')
+	}
+
+	stages {
+	    
+	    stage('gitclone') {
+
+			steps {
+				git([url: 'https://github.com/tejasmanu-deloitte/demo_docker_repo.git', branch: 'main'])
+			}
+		}
+
+		stage('Build') {
+
+			steps {
+				sh 'docker build -t tejasmas1205/demo_jnk_test:latest .'
+			}
+		}
+
+		stage('Login') {
+
+			steps {
+				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+			}
+		}
+
+		stage('Push') {
+
+			steps {
+				sh 'docker push tejasmas1205/demo_jnk_test:latest'
+			}
+		}
+	}
+
+	post {
+		always {
+			sh 'docker logout'
+		}
+	}
+
+}

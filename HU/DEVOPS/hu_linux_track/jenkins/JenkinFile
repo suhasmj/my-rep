@@ -1,0 +1,34 @@
+pipeline {
+    agent {label 'Docker-Tejas'}
+    stages {
+        stage('DEV') {
+            steps {
+                echo 'Tejas Manu S'
+                echo 'Development'
+            }
+        }
+    
+        stage('UAT'){
+            steps{
+                echo 'Tejas Manu S'
+                echo 'User Acceptance Testing'
+            }
+        }
+        
+        stage('PROD'){
+            steps{
+                echo 'Tejas Manu S'
+                echo 'Production'
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'SUCCESS'
+        }
+        failure {
+            echo 'FAILED'
+        }
+    }
+}

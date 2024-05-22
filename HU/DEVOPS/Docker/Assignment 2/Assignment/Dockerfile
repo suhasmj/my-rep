@@ -1,0 +1,2 @@
+FROM gazgeek/springboot-helloworld
+

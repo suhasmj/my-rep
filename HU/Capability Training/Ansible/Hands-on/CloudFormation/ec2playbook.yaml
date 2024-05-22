@@ -1,0 +1,40 @@
+-
+  name: "Configure Ansible Controller"
+  hosts: all
+  become: yes
+  tasks:
+    - name: "Update Cache of the Machine"
+      apt: update_cache=yes
+
+    - name: "Install Ansible dependencies"
+      apt: name='software-properties-common' state=present
+
+    - name: "Add Ansible Repository"
+      shell: add-apt-repository --yes --update ppa:ansible/ansible
+
+    - name: "Install Ansible"
+      apt: name='ansible' state=present
+
+    - name: "Copy Ansible Configuration File"
+      copy: src=ansible.cfg dest=/etc/ansible/ansible.cfg
+
+    - name: "Copy SSH key"
+      copy: src=demokey.pem dest=/home/ubuntu/demokey.pem
+
+    - name: "Copy Ansible Playbook"
+      copy: src=playbook.yaml dest=/home/ubuntu/playbook.yaml
+
+    - name: "Copy Ansible Inventory"
+      copy: src=inventory.txt dest=/home/ubuntu/inventory.txt
+
+    - name: "Copy Web Source Code"
+      copy: src=app.py dest=/home/ubuntu/app.py
+
+    - name: "Copy Sequel Code"
+      copy: src=sample.sql dest=/home/ubuntu/sample.sql
+
+    - name: "Change Access of Key"
+      file: path=/home/ubuntu/demokey.pem mode=0400
+
+    - name: "Run Ansible Playbook"
+      shell: ansible-playbook playbook.yaml -i inventory.txt
